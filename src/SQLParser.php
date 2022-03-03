@@ -197,6 +197,12 @@ class SQLParser{
 				$tables[$table['name']] = $table;
 			}
 
+			if (StrToUpper($s[0]) == 'INSERT'){
+
+				$table = $this->parse_insert_data($s, 1, count($s));
+				$tables[$table['name']]['data'] = $table['insert_data'];
+			}
+
 			if (StrToUpper($s[0]) == 'CREATE TEMPORARY TABLE'){
 
 				$table = $this->parse_create_table($s, 1, count($s));
@@ -273,6 +279,55 @@ class SQLParser{
 		return $table;
 	}
 
+	function parse_insert_data($tokens, $i, $num) {
+
+		if ($tokens[$i] == 'INTO'){
+			$i++;
+		}
+
+
+		#
+		# name
+		#
+
+		$name = $this->decode_identifier($tokens[$i++]);
+
+		#
+		# create_definition
+		#
+
+		$insert_data = [];
+
+		if ($this->next_tokens($tokens, $i, '(')){
+			$i++;
+			$insert_fields = $this->parse_insert_field_definition($tokens, $i);
+			$insert_data['header'] = $insert_fields;
+		}
+
+		if ($tokens[$i] == 'VALUES'){
+			$i++;
+		}
+
+		for ($x = $i; $x <= count($tokens); $x++) {
+			$insert_data['data'][] = $this->parse_insert_field_data($tokens, $x);
+		}
+
+		$table = [
+			'name' => $name,
+			'insert_data'	=> $insert_data,
+		];
+
+		return $table;
+	}
+
+	function parse_insert_field_data($tokens, &$i) {
+		if ($this->next_tokens($tokens, $i, '(')) {
+			$i++;
+			$field_data = $this->parse_insert_field_data_definition($tokens, $i);
+		}
+
+		return $field_data;
+	}
 
 	function next_tokens($tokens, $i){
 
@@ -307,6 +362,39 @@ class SQLParser{
 			'fields'	=> $fields,
 			'indexes'	=> $indexes,
 		);
+	}
+
+	function parse_insert_field_definition($tokens, &$i) {
+
+		$fields = [];
+
+		while ($tokens[$i] != ')') {
+
+			$start = $i;
+			$end = $this->find_next_field($tokens, $i);
+
+			$fields[] = $this->decode_identifier($tokens[$start]);
+		}
+
+		$i++;
+
+		return $fields;
+	}
+
+	function parse_insert_field_data_definition($tokens, &$i) {
+		$field_data = [];
+
+		while ($tokens[$i] != ')') {
+
+			$start = $i;
+			$end = $this->find_next_field($tokens, $i);
+
+			$field_data[] = $this->decode_identifier($tokens[$start]);
+		}
+
+		$i++;
+
+		return $field_data;
 	}
 
 	function parse_field_or_key($tokens, $i, $max, &$fields, &$indexes){
@@ -1000,5 +1088,3 @@ class SQLParser{
 		return $token;
 	}
 }
-
-
