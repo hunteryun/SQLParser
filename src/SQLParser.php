@@ -201,6 +201,9 @@ class SQLParser{
 
 				$table = $this->parse_insert_data($s, 1, count($s));
 				$tables[$table['name']]['data'] = $table['insert_data'];
+				if (!isset($tables[$table['name']]['data']['header'])) {
+					$tables[$table['name']]['data']['header'] = array_column($tables[$table['name']]['fields'], 'name');
+				}
 			}
 
 			if (StrToUpper($s[0]) == 'CREATE TEMPORARY TABLE'){
@@ -389,7 +392,7 @@ class SQLParser{
 			$start = $i;
 			$end = $this->find_next_field($tokens, $i);
 
-			$field_data[] = $this->decode_identifier($tokens[$start]);
+			$field_data[] = $this->decode_value($tokens[$start]);
 		}
 
 		$i++;
